@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyGlot Quiz Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #ffffff;
+            --paper: rgb(34, 154, 255);
+            --accent: #ffffff;
+            --accent-soft: rgba(255, 255, 255, 0.3);
+            --accent-darker: rgba(255, 255, 255, 0.9);
+            --muted: rgba(255, 255, 255, 0.8);
+            --border: rgba(255, 255, 255, 0.3);
+            --highlight: rgba(255, 255, 255, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Work Sans', sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Decorative background pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.02;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, var(--accent) 2px, var(--accent) 3px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, var(--accent) 2px, var(--accent) 3px);
+            background-size: 30px 30px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 80px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(3rem, 8vw, 5.5rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1;
+            margin-bottom: 20px;
+            color: var(--ink);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--muted);
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .section {
+            background: rgba(0, 0, 0, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            padding: 40px;
+            margin-bottom: 30px;
+            position: relative;
+            box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.2);
+            animation: fadeInUp 0.8s ease-out;
+            animation-fill-mode: both;
+            backdrop-filter: blur(10px);
+        }
+
+        .section:nth-child(2) { animation-delay: 0.1s; }
+        .section:nth-child(3) { animation-delay: 0.2s; }
+        .section:nth-child(4) { animation-delay: 0.3s; }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 20px;
+            width: 80px;
+            height: 2px;
+            background: white;
+        }
+
+        h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            color: var(--ink);
+        }
+
+        .upload-zone {
+            border: 3px dashed rgba(255, 255, 255, 0.5);
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: white;
+            opacity: 0.15;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        .upload-zone:hover::before {
+            width: 500px;
+            height: 500px;
+        }
+
+        .upload-zone:hover {
+            border-color: white;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .upload-zone.dragover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: white;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.8;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            color: white;
+            position: relative;
+            z-index: 1;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            border-left: 4px solid white;
+            display: none;
+            animation: slideIn 0.4s ease;
+        }
+
+        .file-info.visible {
+            display: block;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .stat-value {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .controls {
+            display: grid;
+            gap: 25px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--ink);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        select, input[type="number"] {
+            padding: 12px 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-family: 'Work Sans', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        select option {
+            background: rgb(34, 154, 255);
+            color: white;
+        }
+
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: white;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            accent-color: white;
+        }
+
+        button {
+            padding: 18px 40px;
+            background: white;
+            color: rgb(34, 154, 255);
+            border: none;
+            font-family: 'Work Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(34, 154, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:disabled {
+            background: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.6);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button:disabled:hover {
+            box-shadow: none;
+        }
+
+        .quiz-container {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .quiz-container.active {
+            display: block;
+        }
+
+        .quiz-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .quiz-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .quiz-progress {
+            font-size: 1.1rem;
+            color: var(--muted);
+        }
+
+        .question-card {
+            background: rgba(0, 0, 0, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .question-text {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: white;
+            text-align: center;
+        }
+
+        .answer-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-family: 'Work Sans', sans-serif;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .answer-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .answer-input:focus {
+            outline: none;
+            border-color: white;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .options {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .option-btn {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            text-align: left;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .option-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: white;
+            transform: translateX(5px);
+        }
+
+        .option-btn.selected {
+            background: white;
+            color: rgb(34, 154, 255);
+            border-color: white;
+        }
+
+        .quiz-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .results {
+            text-align: center;
+            padding: 60px 40px;
+        }
+
+        .results h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            margin-bottom: 30px;
+        }
+
+        .score {
+            font-size: 5rem;
+            font-weight: 700;
+            color: white;
+            font-family: 'Cormorant Garamond', serif;
+            line-height: 1;
+            margin-bottom: 20px;
+        }
+
+        .score-label {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 40px;
+        }
+
+        .review-item {
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid rgba(255, 255, 255, 0.4);
+            text-align: left;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .review-item.correct {
+            border-left-color: #4caf50;
+            background: rgba(76, 175, 80, 0.2);
+        }
+
+        .review-item.incorrect {
+            border-left-color: #ff5252;
+            background: rgba(255, 82, 82, 0.2);
+        }
+
+        .section.hidden {
+            display: none;
+        }
+
+        .section.slide-in {
+            animation: slideInFromBottom 0.6s ease-out;
+        }
+
+        @keyframes slideInFromBottom {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 20px;
+            }
+
+            .section {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 3rem;
+            }
+
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PolyGlot Quiz</h1>
+            <p class="subtitle">Master Your Conlang</p>
+        </header>
+
+        <div id="setupView">
+            <div class="section">
+                <h2>Upload Language File</h2>
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">
+                        <strong>Drop your .pgd file here</strong><br>
+                        or click to browse
+                    </div>
+                    <input type="file" id="fileInput" accept=".pgd">
+                </div>
+                <div class="file-info" id="fileInfo">
+                    <div class="file-name" id="fileName"></div>
+                    <div class="stats">
+                        <div class="stat">
+                            <div class="stat-value" id="wordCount">0</div>
+                            <div class="stat-label">Words</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value" id="posCount">0</div>
+                            <div class="stat-label">Parts of Speech</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section hidden" id="settingsSection">
+                <h2>Quiz Settings</h2>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Question Types (Select Multiple)</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="local-to-conlang" checked>
+                                <span>Local Language → Conlang</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="conlang-to-local" checked>
+                                <span>Conlang → Local Language</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="from-definition">
+                                <span>From Definition</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="guess-pos">
+                                <span>Guess Part of Speech</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="guess-class">
+                                <span>Guess Lexical Class</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="from-pronunciation">
+                                <span>From Pronunciation</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="guess-pronunciation">
+                                <span>Guess Pronunciation</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="tf-translation">
+                                <span>True/False Translation</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="phrasebook-translation">
+                                <span>Phrasebook Translation</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="phrasebook-tf">
+                                <span>Phrasebook True/False</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="guess-conjugation">
+                                <span>Guess Conjugation</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" class="question-type" value="guess-conjugation-dimensions">
+                                <span>Guess Conjugation Dimensions</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="answerFormat">Answer Format</label>
+                        <select id="answerFormat">
+                            <option value="multiple-choice">Multiple Choice Only</option>
+                            <option value="text-input">Text Input Only</option>
+                            <option value="both">Both (50/50 chance)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group" id="numChoicesGroup">
+                        <label for="numChoices">Number of Choices (Multiple Choice)</label>
+                        <input type="number" id="numChoices" value="4" min="2" max="10">
+                    </div>
+
+                    <div class="control-group">
+                        <label for="numQuestions">Number of Questions</label>
+                        <input type="number" id="numQuestions" value="10" min="1" max="100">
+                    </div>
+
+                    <div class="control-group">
+                        <label>Exclude Parts of Speech</label>
+                        <div class="checkbox-group" id="excludePOS">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Exclude Lexical Classes</label>
+                        <div class="checkbox-group" id="excludeClasses">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label>Additional Options</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="revealAnswer" checked>
+                                <span>Reveal Answer After Wrong Guess</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="caseSensitive">
+                                <span>Case Sensitive</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="accentSensitive">
+                                <span>Accent Sensitive</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="posSensitiveChoices" checked>
+                                <span>POS-Sensitive Multiple Choice</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button id="startQuiz" disabled>Start Quiz</button>
+            </div>
+        </div>
+
+        <div id="quizView" class="quiz-container">
+            <div class="quiz-header">
+                <div class="quiz-title" id="quizTitle">Quiz</div>
+                <div class="quiz-progress" id="quizProgress">Question 1 of 10</div>
+            </div>
+
+            <div class="question-card" id="questionCard">
+                <!-- Dynamically populated -->
+            </div>
+
+            <div class="quiz-actions">
+                <button id="checkAnswer">Check Answer</button>
+                <button id="nextQuestion" style="display: none;">Next Question</button>
+            </div>
+        </div>
+
+        <div id="resultsView" class="quiz-container">
+            <div class="section results">
+                <h2>Quiz Complete!</h2>
+                <div class="score" id="finalScore">0%</div>
+                <div class="score-label" id="scoreDetails">0 / 0 correct</div>
+                <div id="reviewSection"></div>
+                <button id="newQuiz">Create New Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let languageData = null;
+        let quizData = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let userAnswers = [];
+
+        // DOM elements
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const wordCount = document.getElementById('wordCount');
+        const posCount = document.getElementById('posCount');
+        const posFilters = document.getElementById('posFilters');
+        const startQuiz = document.getElementById('startQuiz');
+        const setupView = document.getElementById('setupView');
+        const quizView = document.getElementById('quizView');
+        const resultsView = document.getElementById('resultsView');
+        const settingsSection = document.getElementById('settingsSection');
+        const answerFormat = document.getElementById('answerFormat');
+        const numChoicesGroup = document.getElementById('numChoicesGroup');
+
+        // Show/hide number of choices based on answer format
+        answerFormat.addEventListener('change', () => {
+            if (answerFormat.value === 'text-input') {
+                numChoicesGroup.style.display = 'none';
+            } else {
+                numChoicesGroup.style.display = 'flex';
+            }
+        });
+
+        // Upload zone interactions
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.pgd')) {
+                handleFile(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        });
+
+        // Parse PolyGlot .pgd file (XML format)
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(e.target.result, 'text/xml');
+                    
+                    // Check for parsing errors
+                    const parseError = xmlDoc.querySelector('parsererror');
+                    if (parseError) {
+                        alert('Error parsing XML file. Please ensure it\'s a valid PolyGlot .pgd file.');
+                        return;
+                    }
+
+                    languageData = parsePolyGlotXML(xmlDoc);
+                    displayFileInfo(file.name, languageData);
+                    startQuiz.disabled = false;
+                } catch (error) {
+                    alert('Error reading file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parsePolyGlotXML(xmlDoc) {
+            const data = {
+                words: [],
+                partsOfSpeech: new Set(),
+                lexicalClasses: new Set(),
+                languageName: '',
+                phrasebook: [],
+                conjugations: new Map()
+            };
+
+            // Get language name
+            const langNameEl = xmlDoc.querySelector('langName');
+            if (langNameEl) {
+                data.languageName = langNameEl.textContent;
+            }
+
+            // Parse lexicon entries
+            const lexiconEntries = xmlDoc.querySelectorAll('word');
+            lexiconEntries.forEach(wordEl => {
+                const conlangWord = wordEl.querySelector('value')?.textContent || '';
+                const localWord = wordEl.querySelector('localWord')?.textContent || '';
+                const definition = wordEl.querySelector('definition')?.textContent || '';
+                const pos = wordEl.querySelector('type')?.textContent || 'Unknown';
+                const pronunciation = wordEl.querySelector('pronunciation')?.textContent || 
+                                    wordEl.querySelector('procOverride')?.textContent || '';
+                const wordClass = wordEl.querySelector('class')?.textContent || 
+                                wordEl.querySelector('wordClass')?.textContent || '';
+
+                if (conlangWord && localWord) {
+                    data.words.push({
+                        conlang: conlangWord,
+                        translation: localWord,
+                        definition: definition,
+                        partOfSpeech: pos,
+                        pronunciation: pronunciation,
+                        lexicalClass: wordClass
+                    });
+                    data.partsOfSpeech.add(pos);
+                    if (wordClass) {
+                        data.lexicalClasses.add(wordClass);
+                    }
+                }
+            });
+
+            // Parse phrasebook
+            const phrases = xmlDoc.querySelectorAll('phrase');
+            phrases.forEach(phraseEl => {
+                const conlangPhrase = phraseEl.querySelector('conPhrase')?.textContent || 
+                                     phraseEl.querySelector('value')?.textContent || '';
+                const localPhrase = phraseEl.querySelector('localPhrase')?.textContent || 
+                                   phraseEl.querySelector('localWord')?.textContent || '';
+                
+                if (conlangPhrase && localPhrase) {
+                    data.phrasebook.push({
+                        conlang: conlangPhrase,
+                        local: localPhrase
+                    });
+                }
+            });
+
+            // Parse conjugations/declensions
+            const declensions = xmlDoc.querySelectorAll('declension');
+            declensions.forEach(declEl => {
+                const baseWord = declEl.querySelector('baseWord')?.textContent || '';
+                const combinedId = declEl.querySelector('combinedId')?.textContent || '';
+                const declensionText = declEl.querySelector('value')?.textContent || '';
+                
+                if (baseWord && declensionText) {
+                    if (!data.conjugations.has(baseWord)) {
+                        data.conjugations.set(baseWord, []);
+                    }
+                    data.conjugations.get(baseWord).push({
+                        form: declensionText,
+                        dimensions: combinedId
+                    });
+                }
+            });
+
+            return data;
+        }
+
+        function displayFileInfo(name, data) {
+            fileName.textContent = name;
+            wordCount.textContent = data.words.length;
+            posCount.textContent = data.partsOfSpeech.size;
+            fileInfo.classList.add('visible');
+
+            // Show settings section with animation
+            settingsSection.classList.remove('hidden');
+            settingsSection.classList.add('slide-in');
+
+            // Populate POS exclusion list
+            const excludePOS = document.getElementById('excludePOS');
+            excludePOS.innerHTML = '';
+            data.partsOfSpeech.forEach(pos => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-item';
+                label.innerHTML = `
+                    <input type="checkbox" class="exclude-pos" value="${pos}">
+                    <span>${pos}</span>
+                `;
+                excludePOS.appendChild(label);
+            });
+
+            // Populate lexical class exclusion list
+            const excludeClasses = document.getElementById('excludeClasses');
+            excludeClasses.innerHTML = '';
+            if (data.lexicalClasses.size > 0) {
+                data.lexicalClasses.forEach(cls => {
+                    const label = document.createElement('label');
+                    label.className = 'checkbox-item';
+                    label.innerHTML = `
+                        <input type="checkbox" class="exclude-class" value="${cls}">
+                        <span>${cls}</span>
+                    `;
+                    excludeClasses.appendChild(label);
+                });
+            } else {
+                excludeClasses.innerHTML = '<p style="color: rgba(255,255,255,0.6); font-style: italic;">No lexical classes found in file</p>';
+            }
+
+            // Enable start button
+            startQuiz.disabled = false;
+        }
+
+        // Quiz generation
+        startQuiz.addEventListener('click', () => {
+            if (generateQuiz()) {
+                setupView.style.display = 'none';
+                quizView.classList.add('active');
+                showQuestion();
+            }
+        });
+
+        function generateQuiz() {
+            // Get selected question types
+            const selectedTypes = Array.from(document.querySelectorAll('.question-type:checked'))
+                .map(cb => cb.value);
+            
+            if (selectedTypes.length === 0) {
+                alert('Please select at least one question type!');
+                return false;
+            }
+
+            const answerFormatSetting = document.getElementById('answerFormat').value;
+            const numChoices = parseInt(document.getElementById('numChoices').value);
+            const numQuestions = parseInt(document.getElementById('numQuestions').value);
+            
+            const excludedPOS = Array.from(document.querySelectorAll('.exclude-pos:checked'))
+                .map(cb => cb.value);
+            const excludedClasses = Array.from(document.querySelectorAll('.exclude-class:checked'))
+                .map(cb => cb.value);
+
+            // Filter words
+            let availableWords = languageData.words.filter(w => 
+                !excludedPOS.includes(w.partOfSpeech) &&
+                !excludedClasses.includes(w.lexicalClass)
+            );
+
+            if (availableWords.length === 0) {
+                alert('No words available with current filters!');
+                return false;
+            }
+
+            // Filter question types based on data availability
+            const validTypes = selectedTypes.filter(type => {
+                if (type === 'phrasebook-translation' || type === 'phrasebook-tf') {
+                    return languageData.phrasebook.length >= 5;
+                }
+                if (type === 'from-pronunciation' || type === 'guess-pronunciation') {
+                    return availableWords.some(w => w.pronunciation);
+                }
+                if (type === 'guess-class') {
+                    return availableWords.some(w => w.lexicalClass);
+                }
+                if (type === 'guess-conjugation' || type === 'guess-conjugation-dimensions') {
+                    return languageData.conjugations.size > 0;
+                }
+                return true;
+            });
+
+            if (validTypes.length === 0) {
+                alert('Selected question types require data not present in the file!');
+                return false;
+            }
+
+            // Generate questions
+            quizData = [];
+            for (let i = 0; i < numQuestions; i++) {
+                const questionType = validTypes[Math.floor(Math.random() * validTypes.length)];
+                
+                // Determine answer format for this question
+                let answerFormat;
+                if (answerFormatSetting === 'both') {
+                    answerFormat = Math.random() < 0.5 ? 'multiple-choice' : 'text-input';
+                } else {
+                    answerFormat = answerFormatSetting;
+                }
+
+                // True/False questions are always multiple choice with 2 options
+                if (questionType === 'tf-translation' || questionType === 'phrasebook-tf') {
+                    answerFormat = 'multiple-choice';
+                }
+
+                const question = generateQuestion(questionType, availableWords, answerFormat, numChoices);
+                if (question) {
+                    quizData.push(question);
+                }
+            }
+
+            if (quizData.length === 0) {
+                alert('Could not generate any questions!');
+                return false;
+            }
+
+            currentQuestion = 0;
+            score = 0;
+            userAnswers = [];
+            return true;
+        }
+
+        function generateQuestion(type, words, answerFormat, numChoices) {
+            let question = {
+                type: type,
+                answerFormat: answerFormat
+            };
+
+            switch(type) {
+                case 'local-to-conlang':
+                    const word1 = words[Math.floor(Math.random() * words.length)];
+                    question.prompt = word1.translation;
+                    question.correctAnswer = word1.conlang;
+                    question.word = word1;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = generateMultipleChoiceOptions(word1.conlang, words, 'conlang', numChoices, word1.partOfSpeech);
+                    }
+                    break;
+
+                case 'conlang-to-local':
+                    const word2 = words[Math.floor(Math.random() * words.length)];
+                    question.prompt = word2.conlang;
+                    question.correctAnswer = word2.translation;
+                    question.word = word2;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = generateMultipleChoiceOptions(word2.translation, words, 'translation', numChoices, word2.partOfSpeech);
+                    }
+                    break;
+
+                case 'from-definition':
+                    const wordsWithDef = words.filter(w => w.definition);
+                    if (wordsWithDef.length === 0) return null;
+                    const word3 = wordsWithDef[Math.floor(Math.random() * wordsWithDef.length)];
+                    question.prompt = word3.definition;
+                    question.correctAnswer = word3.conlang;
+                    question.word = word3;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = generateMultipleChoiceOptions(word3.conlang, words, 'conlang', numChoices, word3.partOfSpeech);
+                    }
+                    break;
+
+                case 'guess-pos':
+                    const word4 = words[Math.floor(Math.random() * words.length)];
+                    question.prompt = word4.conlang;
+                    question.correctAnswer = word4.partOfSpeech;
+                    question.word = word4;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = generatePOSOptions(word4.partOfSpeech, numChoices);
+                    }
+                    break;
+
+                case 'guess-class':
+                    const wordsWithClass = words.filter(w => w.lexicalClass);
+                    if (wordsWithClass.length === 0) return null;
+                    const word5 = wordsWithClass[Math.floor(Math.random() * wordsWithClass.length)];
+                    question.prompt = word5.conlang;
+                    question.correctAnswer = word5.lexicalClass;
+                    question.word = word5;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = generateClassOptions(word5.lexicalClass, word5.partOfSpeech, numChoices);
+                    }
+                    break;
+
+                case 'from-pronunciation':
+                    const wordsWithPron = words.filter(w => w.pronunciation);
+                    if (wordsWithPron.length === 0) return null;
+                    const word6 = wordsWithPron[Math.floor(Math.random() * wordsWithPron.length)];
+                    question.prompt = word6.pronunciation;
+                    question.correctAnswer = word6.conlang;
+                    question.word = word6;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = generateMultipleChoiceOptions(word6.conlang, wordsWithPron, 'conlang', numChoices, word6.partOfSpeech);
+                    }
+                    break;
+
+                case 'guess-pronunciation':
+                    const wordsWithPron2 = words.filter(w => w.pronunciation);
+                    if (wordsWithPron2.length === 0) return null;
+                    const word7 = wordsWithPron2[Math.floor(Math.random() * wordsWithPron2.length)];
+                    question.prompt = word7.conlang;
+                    question.correctAnswer = word7.pronunciation;
+                    question.word = word7;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = generateMultipleChoiceOptions(word7.pronunciation, wordsWithPron2, 'pronunciation', numChoices, word7.partOfSpeech);
+                    }
+                    break;
+
+                case 'tf-translation':
+                    const word8 = words[Math.floor(Math.random() * words.length)];
+                    const isCorrect = Math.random() < 0.5;
+                    question.prompt = `${word8.conlang} = ${isCorrect ? word8.translation : getRandomWordOfSamePOS(words, word8).translation}`;
+                    question.correctAnswer = isCorrect ? 'True' : 'False';
+                    question.options = ['True', 'False'];
+                    question.word = word8;
+                    break;
+
+                case 'phrasebook-translation':
+                    if (languageData.phrasebook.length < 5) return null;
+                    const phrase1 = languageData.phrasebook[Math.floor(Math.random() * languageData.phrasebook.length)];
+                    question.prompt = phrase1.local;
+                    question.correctAnswer = phrase1.conlang;
+                    question.isPhrase = true;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = generatePhraseOptions(phrase1.conlang, numChoices);
+                    }
+                    break;
+
+                case 'phrasebook-tf':
+                    if (languageData.phrasebook.length < 5) return null;
+                    const phrase2 = languageData.phrasebook[Math.floor(Math.random() * languageData.phrasebook.length)];
+                    const isPhraseCorrect = Math.random() < 0.5;
+                    const displayPhrase = isPhraseCorrect ? phrase2.conlang : 
+                        languageData.phrasebook[Math.floor(Math.random() * languageData.phrasebook.length)].conlang;
+                    question.prompt = `${phrase2.local} → ${displayPhrase}`;
+                    question.correctAnswer = isPhraseCorrect ? 'True' : 'False';
+                    question.options = ['True', 'False'];
+                    question.isPhrase = true;
+                    break;
+
+                case 'guess-conjugation':
+                    const conjugatedWords = Array.from(languageData.conjugations.keys());
+                    if (conjugatedWords.length === 0) return null;
+                    const baseWord = conjugatedWords[Math.floor(Math.random() * conjugatedWords.length)];
+                    const conjugations = languageData.conjugations.get(baseWord);
+                    const targetConj = conjugations[Math.floor(Math.random() * conjugations.length)];
+                    question.prompt = `${baseWord} (${targetConj.dimensions})`;
+                    question.correctAnswer = targetConj.form;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = conjugations.map(c => c.form).slice(0, numChoices);
+                        if (!question.options.includes(targetConj.form)) {
+                            question.options[0] = targetConj.form;
+                        }
+                        question.options = shuffleArray(question.options);
+                    }
+                    break;
+
+                case 'guess-conjugation-dimensions':
+                    const conjugatedWords2 = Array.from(languageData.conjugations.keys());
+                    if (conjugatedWords2.length === 0) return null;
+                    const baseWord2 = conjugatedWords2[Math.floor(Math.random() * conjugatedWords2.length)];
+                    const conjugations2 = languageData.conjugations.get(baseWord2);
+                    const targetConj2 = conjugations2[Math.floor(Math.random() * conjugations2.length)];
+                    question.prompt = `${baseWord2} → ${targetConj2.form}`;
+                    question.correctAnswer = targetConj2.dimensions;
+                    if (answerFormat === 'multiple-choice') {
+                        question.options = conjugations2.map(c => c.dimensions).slice(0, numChoices);
+                        if (!question.options.includes(targetConj2.dimensions)) {
+                            question.options[0] = targetConj2.dimensions;
+                        }
+                        question.options = shuffleArray(question.options);
+                    }
+                    break;
+            }
+
+            return question;
+        }
+
+        function getRandomWordOfSamePOS(words, currentWord) {
+            const samePOS = words.filter(w => w.partOfSpeech === currentWord.partOfSpeech && w.conlang !== currentWord.conlang);
+            return samePOS.length > 0 ? samePOS[Math.floor(Math.random() * samePOS.length)] : currentWord;
+        }
+
+        function generateMultipleChoiceOptions(correctAnswer, words, field, numChoices, pos) {
+            const posSensitive = document.getElementById('posSensitiveChoices').checked;
+            const options = [correctAnswer];
+            
+            let pool = words.map(w => w[field]).filter(val => val && val !== correctAnswer);
+            
+            if (posSensitive && pos) {
+                pool = words.filter(w => w.partOfSpeech === pos).map(w => w[field]).filter(val => val && val !== correctAnswer);
+            }
+
+            while (options.length < numChoices && pool.length > 0) {
+                const randomIndex = Math.floor(Math.random() * pool.length);
+                const option = pool.splice(randomIndex, 1)[0];
+                if (!options.includes(option)) {
+                    options.push(option);
+                }
+            }
+
+            return shuffleArray(options);
+        }
+
+        function generatePOSOptions(correctPOS, numChoices) {
+            const allPOS = Array.from(languageData.partsOfSpeech);
+            const options = [correctPOS];
+            
+            const otherPOS = allPOS.filter(p => p !== correctPOS);
+            while (options.length < numChoices && otherPOS.length > 0) {
+                const randomIndex = Math.floor(Math.random() * otherPOS.length);
+                options.push(otherPOS.splice(randomIndex, 1)[0]);
+            }
+
+            return shuffleArray(options);
+        }
+
+        function generateClassOptions(correctClass, pos, numChoices) {
+            const allClasses = Array.from(languageData.lexicalClasses);
+            const options = [correctClass];
+            
+            const otherClasses = allClasses.filter(c => c !== correctClass);
+            while (options.length < numChoices && otherClasses.length > 0) {
+                const randomIndex = Math.floor(Math.random() * otherClasses.length);
+                options.push(otherClasses.splice(randomIndex, 1)[0]);
+            }
+
+            return shuffleArray(options);
+        }
+
+        function generatePhraseOptions(correctPhrase, numChoices) {
+            const options = [correctPhrase];
+            const otherPhrases = languageData.phrasebook.map(p => p.conlang).filter(p => p !== correctPhrase);
+            
+            while (options.length < numChoices && otherPhrases.length > 0) {
+                const randomIndex = Math.floor(Math.random() * otherPhrases.length);
+                options.push(otherPhrases.splice(randomIndex, 1)[0]);
+            }
+
+            return shuffleArray(options);
+        }
+
+        function showQuestion() {
+            const q = quizData[currentQuestion];
+
+            document.getElementById('quizProgress').textContent = 
+                `Question ${currentQuestion + 1} of ${quizData.length}`;
+
+            let questionHTML = `<div class="question-text">${q.prompt}</div>`;
+
+            if (q.answerFormat === 'text-input') {
+                questionHTML += `<input type="text" class="answer-input" id="userAnswer" placeholder="Type your answer..." autocomplete="off">`;
+            } else {
+                questionHTML += `<div class="options">`;
+                q.options.forEach((option, idx) => {
+                    questionHTML += `<button class="option-btn" data-option="${option}">${option}</button>`;
+                });
+                questionHTML += `</div>`;
+            }
+
+            document.getElementById('questionCard').innerHTML = questionHTML;
+
+            // Add option selection for multiple choice
+            if (q.answerFormat === 'multiple-choice') {
+                document.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.option-btn').forEach(b => 
+                            b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                    });
+                });
+            }
+
+            // Focus input for text questions
+            if (q.answerFormat === 'text-input') {
+                const input = document.getElementById('userAnswer');
+                input.focus();
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        document.getElementById('checkAnswer').click();
+                    }
+                });
+            }
+
+            document.getElementById('checkAnswer').style.display = 'inline-block';
+            document.getElementById('nextQuestion').style.display = 'none';
+        }
+
+        // Utility function to remove accents
+        function removeAccents(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+
+        // Check answer
+        document.getElementById('checkAnswer').addEventListener('click', () => {
+            const q = quizData[currentQuestion];
+            const caseSensitive = document.getElementById('caseSensitive').checked;
+            const accentSensitive = document.getElementById('accentSensitive').checked;
+            const revealAnswer = document.getElementById('revealAnswer').checked;
+            
+            let userAnswer;
+
+            if (q.answerFormat === 'text-input') {
+                userAnswer = document.getElementById('userAnswer').value.trim();
+            } else {
+                const selected = document.querySelector('.option-btn.selected');
+                userAnswer = selected ? selected.dataset.option : '';
+            }
+
+            // Normalize for comparison
+            let normalizedUser = userAnswer;
+            let normalizedCorrect = q.correctAnswer;
+
+            if (!caseSensitive) {
+                normalizedUser = normalizedUser.toLowerCase();
+                normalizedCorrect = normalizedCorrect.toLowerCase();
+            }
+
+            if (!accentSensitive) {
+                normalizedUser = removeAccents(normalizedUser);
+                normalizedCorrect = removeAccents(normalizedCorrect);
+            }
+
+            const correct = normalizedUser === normalizedCorrect;
+
+            if (correct) score++;
+
+            userAnswers.push({
+                question: q,
+                userAnswer: userAnswer,
+                correct: correct
+            });
+
+            // Show feedback
+            const card = document.getElementById('questionCard');
+            const feedback = document.createElement('div');
+            feedback.style.cssText = `
+                margin-top: 20px; 
+                padding: 20px; 
+                border-left: 4px solid ${correct ? '#4caf50' : '#ff5252'};
+                background: ${correct ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 82, 82, 0.2)'};
+                color: white;
+            `;
+            
+            let feedbackHTML = `<strong>${correct ? '✓ Correct!' : '✗ Incorrect'}</strong><br>`;
+            if (!correct && revealAnswer) {
+                feedbackHTML += `The correct answer is: <strong>${q.correctAnswer}</strong>`;
+            }
+            
+            feedback.innerHTML = feedbackHTML;
+            card.appendChild(feedback);
+
+            document.getElementById('checkAnswer').style.display = 'none';
+            document.getElementById('nextQuestion').style.display = 'inline-block';
+        });
+
+        // Next question
+        document.getElementById('nextQuestion').addEventListener('click', () => {
+            currentQuestion++;
+            if (currentQuestion < quizData.length) {
+                showQuestion();
+            } else {
+                showResults();
+            }
+        });
+
+        function showResults() {
+            quizView.classList.remove('active');
+            resultsView.classList.add('active');
+
+            const percentage = Math.round((score / quizData.length) * 100);
+            document.getElementById('finalScore').textContent = `${percentage}%`;
+            document.getElementById('scoreDetails').textContent = 
+                `${score} out of ${quizData.length} correct`;
+
+            // Show review
+            const reviewSection = document.getElementById('reviewSection');
+            reviewSection.innerHTML = '<h3 style="margin: 40px 0 20px; font-family: Cormorant Garamond, serif; font-size: 1.8rem;">Review</h3>';
+            
+            userAnswers.forEach((ans, idx) => {
+                const div = document.createElement('div');
+                div.className = `review-item ${ans.correct ? 'correct' : 'incorrect'}`;
+                div.innerHTML = `
+                    <strong>Q${idx + 1}:</strong> ${ans.question.prompt}<br>
+                    <strong>Your answer:</strong> ${ans.userAnswer || '(no answer)'}<br>
+                    <strong>Correct answer:</strong> ${ans.question.correctAnswer}
+                `;
+                reviewSection.appendChild(div);
+            });
+        }
+
+        document.getElementById('newQuiz').addEventListener('click', () => {
+            resultsView.classList.remove('active');
+            setupView.style.display = 'block';
+        });
+
+        // Utility functions
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+    </script>
+</body>
+</html>
