@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --ink: #ffffff;
@@ -31,6 +32,8 @@
             color: var(--ink);
             line-height: 1.6;
             overflow-x: hidden;
+            margin: 0;
+            padding: 0;
         }
 
         /* Decorative background pattern */
@@ -370,6 +373,68 @@
             margin-bottom: 30px;
             box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(10px);
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .question-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .question-type-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .word-info-panel {
+            width: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .word-info-panel.visible {
+            display: block;
+        }
+
+        .word-info-panel h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: white;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .word-info-item {
+            margin-bottom: 12px;
+        }
+
+        .word-info-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 3px;
+        }
+
+        .word-info-value {
+            color: white;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .word-info-pronunciation {
+            font-family: 'Charis SIL', serif;
+            font-size: 1.1rem;
         }
 
         .question-text {
@@ -438,6 +503,21 @@
             gap: 15px;
             justify-content: center;
             margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .quit-button {
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 12px 30px;
+            font-size: 0.9rem;
+        }
+
+        .quit-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: white;
+            box-shadow: none;
         }
 
         .results {
@@ -556,6 +636,14 @@
 
             .stats {
                 grid-template-columns: 1fr 1fr;
+            }
+
+            .question-card {
+                flex-direction: column;
+            }
+
+            .word-info-panel {
+                width: 100%;
             }
         }
     </style>
@@ -691,6 +779,10 @@
                                 <span>Reveal Answer After Wrong Guess</span>
                             </label>
                             <label class="checkbox-item">
+                                <input type="checkbox" id="showWordInfo" checked>
+                                <span>Show Word Info Panel</span>
+                            </label>
+                            <label class="checkbox-item">
                                 <input type="checkbox" id="caseSensitive">
                                 <span>Case Sensitive</span>
                             </label>
@@ -722,6 +814,7 @@
             <div class="quiz-actions">
                 <button id="checkAnswer">Check Answer</button>
                 <button id="nextQuestion" style="display: none;">Next Question</button>
+                <button id="quitQuiz" class="quit-button">Quit Quiz</button>
             </div>
         </div>
 
@@ -751,7 +844,6 @@
         const fileName = document.getElementById('fileName');
         const wordCount = document.getElementById('wordCount');
         const posCount = document.getElementById('posCount');
-        const posFilters = document.getElementById('posFilters');
         const startQuiz = document.getElementById('startQuiz');
         const setupView = document.getElementById('setupView');
         const quizView = document.getElementById('quizView');
@@ -795,29 +887,65 @@
             if (file) handleFile(file);
         });
 
-        // Parse PolyGlot .pgd file (XML format)
+        // Parse PolyGlot .pgd file (ZIP containing XML)
         function handleFile(file) {
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
+                    // PolyGlot files are ZIP archives containing PGDictionary.xml
+                    const zip = await JSZip.loadAsync(e.target.result);
+                    
+                    console.log('ZIP contents:', Object.keys(zip.files));
+                    
+                    // Look for the XML file (usually PGDictionary.xml)
+                    const xmlFile = zip.file('PGDictionary.xml') || 
+                                   zip.file(Object.keys(zip.files).find(name => name.endsWith('.xml')));
+                    
+                    if (!xmlFile) {
+                        alert('No XML file found in the .pgd archive.');
+                        return;
+                    }
+
+                    const xmlContent = await xmlFile.async('text');
+                    console.log('XML extracted, length:', xmlContent.length);
+
                     const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(e.target.result, 'text/xml');
+                    const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
                     
                     // Check for parsing errors
                     const parseError = xmlDoc.querySelector('parsererror');
                     if (parseError) {
-                        alert('Error parsing XML file. Please ensure it\'s a valid PolyGlot .pgd file.');
+                        console.error('XML Parse Error:', parseError.textContent);
+                        alert('Error parsing XML file. Please ensure it\'s a valid PolyGlot .pgd file.\n\nCheck browser console (F12) for details.');
                         return;
                     }
 
+                    console.log('XML parsed successfully');
+                    console.log('Root element:', xmlDoc.documentElement.tagName);
+                    console.log('First few child elements:', Array.from(xmlDoc.documentElement.children).slice(0, 10).map(el => el.tagName));
+
                     languageData = parsePolyGlotXML(xmlDoc);
+                    
+                    console.log('Parsed data:', {
+                        words: languageData.words.length,
+                        pos: languageData.partsOfSpeech.size,
+                        classes: languageData.lexicalClasses.size,
+                        phrases: languageData.phrasebook.length,
+                        conjugations: languageData.conjugations.size
+                    });
+
+                    if (languageData.words.length === 0) {
+                        alert('No words found in file. The file may use a different XML structure.\n\nCheck browser console (F12) for details.');
+                        return;
+                    }
+
                     displayFileInfo(file.name, languageData);
-                    startQuiz.disabled = false;
                 } catch (error) {
-                    alert('Error reading file: ' + error.message);
+                    console.error('Error details:', error);
+                    alert('Error reading file: ' + error.message + '\n\nCheck browser console (F12) for details.');
                 }
             };
-            reader.readAsText(file);
+            reader.readAsArrayBuffer(file);
         }
 
         function parsePolyGlotXML(xmlDoc) {
@@ -825,67 +953,150 @@
                 words: [],
                 partsOfSpeech: new Set(),
                 lexicalClasses: new Set(),
+                classGroupings: new Map(), // Maps "POS names" -> Set of class names
+                posGlossMap: new Map(), // Maps POS name -> abbreviation
                 languageName: '',
                 phrasebook: [],
                 conjugations: new Map()
             };
 
             // Get language name
-            const langNameEl = xmlDoc.querySelector('langName');
+            const langNameEl = xmlDoc.querySelector('languageProperties > langName');
             if (langNameEl) {
                 data.languageName = langNameEl.textContent;
             }
 
+            // Parse parts of speech
+            const posElements = xmlDoc.querySelectorAll('partsOfSpeech > class');
+            const posMap = new Map();
+            const posGlossMap = new Map(); // Map POS name to abbreviation
+            
+            posElements.forEach(posEl => {
+                const id = posEl.querySelector('classId')?.textContent;
+                const name = posEl.querySelector('className')?.textContent;
+                const gloss = posEl.querySelector('classGloss')?.textContent;
+                
+                if (id && name) {
+                    posMap.set(id, name);
+                    data.partsOfSpeech.add(name);
+                    
+                    // Store gloss/abbreviation if it exists
+                    if (gloss && gloss.trim()) {
+                        posGlossMap.set(name, gloss.trim());
+                    }
+                }
+            });
+            
+            data.posGlossMap = posGlossMap;
+
+            // Parse lexical classes (wordGrammarClassCollection)
+            const classElements = xmlDoc.querySelectorAll('wordGrammarClassCollection > wordGrammarClassNode');
+            const classMap = new Map();
+            
+            classElements.forEach(classEl => {
+                const id = classEl.querySelector('wordGrammarClassID')?.textContent;
+                const name = classEl.querySelector('wordGrammarClassName')?.textContent;
+                const applyTypes = classEl.querySelector('wordGrammarApplyTypes')?.textContent || '';
+                
+                if (id && name) {
+                    classMap.set(id, name);
+                    data.lexicalClasses.add(name);
+                    
+                    // Parse which POS this class applies to
+                    const posIds = applyTypes.split(',').map(s => s.trim()).filter(Boolean);
+                    const applicablePosNames = posIds
+                        .map(posId => posMap.get(posId))
+                        .filter(Boolean)
+                        .join(', ');
+                    
+                    if (applicablePosNames) {
+                        if (!data.classGroupings.has(applicablePosNames)) {
+                            data.classGroupings.set(applicablePosNames, new Set());
+                        }
+                        data.classGroupings.get(applicablePosNames).add(name);
+                    }
+                    
+                    // Also map class values
+                    const valueElements = classEl.querySelectorAll('wordGrammarClassValueNode');
+                    valueElements.forEach(valueEl => {
+                        const valueId = valueEl.querySelector('wordGrammarClassValueId')?.textContent;
+                        const valueName = valueEl.querySelector('wordGrammarClassValueName')?.textContent;
+                        if (valueId && valueName) {
+                            classMap.set(`${id},${valueId}`, valueName);
+                            data.lexicalClasses.add(valueName);
+                            
+                            // Add value to the same POS grouping
+                            if (applicablePosNames) {
+                                data.classGroupings.get(applicablePosNames).add(valueName);
+                            }
+                        }
+                    });
+                }
+            });
+
             // Parse lexicon entries
-            const lexiconEntries = xmlDoc.querySelectorAll('word');
+            const lexiconEntries = xmlDoc.querySelectorAll('lexicon > word');
             lexiconEntries.forEach(wordEl => {
-                const conlangWord = wordEl.querySelector('value')?.textContent || '';
+                const conlangWord = wordEl.querySelector('conWord')?.textContent || '';
                 const localWord = wordEl.querySelector('localWord')?.textContent || '';
                 const definition = wordEl.querySelector('definition')?.textContent || '';
-                const pos = wordEl.querySelector('type')?.textContent || 'Unknown';
-                const pronunciation = wordEl.querySelector('pronunciation')?.textContent || 
-                                    wordEl.querySelector('procOverride')?.textContent || '';
-                const wordClass = wordEl.querySelector('class')?.textContent || 
-                                wordEl.querySelector('wordClass')?.textContent || '';
+                const posId = wordEl.querySelector('wordTypeId')?.textContent || '';
+                const pronunciation = wordEl.querySelector('pronunciation')?.textContent || '';
+                const etymology = wordEl.querySelector('wordEtymologyNotes')?.textContent || '';
+                
+                // Get part of speech name from ID
+                const pos = posMap.get(posId) || 'Unknown';
+
+                // Get lexical classes
+                const classElements = wordEl.querySelectorAll('wordClassCollection > wordClassification');
+                const lexicalClasses = Array.from(classElements).map(el => {
+                    const classValue = el.textContent;
+                    return classMap.get(classValue) || classValue;
+                }).filter(Boolean);
 
                 if (conlangWord && localWord) {
                     data.words.push({
                         conlang: conlangWord,
-                        translation: localWord,
-                        definition: definition,
+                        translation: stripHTML(localWord),
+                        definition: stripHTML(definition),
                         partOfSpeech: pos,
                         pronunciation: pronunciation,
-                        lexicalClass: wordClass
+                        lexicalClass: lexicalClasses.join(', '),
+                        lexicalClassArray: lexicalClasses, // Store as array too for matching
+                        etymology: stripHTML(etymology)
                     });
-                    data.partsOfSpeech.add(pos);
-                    if (wordClass) {
-                        data.lexicalClasses.add(wordClass);
-                    }
                 }
             });
 
             // Parse phrasebook
-            const phrases = xmlDoc.querySelectorAll('phrase');
+            const phrases = xmlDoc.querySelectorAll('phrasebook > phrase');
             phrases.forEach(phraseEl => {
-                const conlangPhrase = phraseEl.querySelector('conPhrase')?.textContent || 
-                                     phraseEl.querySelector('value')?.textContent || '';
-                const localPhrase = phraseEl.querySelector('localPhrase')?.textContent || 
-                                   phraseEl.querySelector('localWord')?.textContent || '';
+                const conlangPhrase = phraseEl.querySelector('conPhrase')?.textContent || '';
+                const localPhrase = phraseEl.querySelector('localPhrase')?.textContent || '';
                 
                 if (conlangPhrase && localPhrase) {
                     data.phrasebook.push({
                         conlang: conlangPhrase,
-                        local: localPhrase
+                        local: stripHTML(localPhrase)
                     });
                 }
             });
 
             // Parse conjugations/declensions
-            const declensions = xmlDoc.querySelectorAll('declension');
+            const declensions = xmlDoc.querySelectorAll('declensionCollection > declensionNode');
             declensions.forEach(declEl => {
-                const baseWord = declEl.querySelector('baseWord')?.textContent || '';
-                const combinedId = declEl.querySelector('combinedId')?.textContent || '';
-                const declensionText = declEl.querySelector('value')?.textContent || '';
+                const baseWordId = declEl.querySelector('declensionRelId')?.textContent || '';
+                const combinedId = declEl.querySelector('combinedDimId')?.textContent || '';
+                const declensionText = declEl.querySelector('declensionText')?.textContent || '';
+                
+                // Find the base word
+                const baseWordEl = Array.from(xmlDoc.querySelectorAll('lexicon > word')).find(w => 
+                    w.querySelector('wordId')?.textContent === baseWordId
+                );
+                let baseWord = '';
+                if (baseWordEl) {
+                    baseWord = baseWordEl.querySelector('conWord')?.textContent || '';
+                }
                 
                 if (baseWord && declensionText) {
                     if (!data.conjugations.has(baseWord)) {
@@ -898,7 +1109,17 @@
                 }
             });
 
+            console.log('Parsed data:', data);
+            console.log('Class groupings:', Array.from(data.classGroupings.entries()));
             return data;
+        }
+
+        // Utility to strip HTML tags from definition/translation text
+        function stripHTML(html) {
+            if (!html) return '';
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            return div.textContent || div.innerText || '';
         }
 
         function displayFileInfo(name, data) {
@@ -924,10 +1145,35 @@
                 excludePOS.appendChild(label);
             });
 
-            // Populate lexical class exclusion list
+            // Populate lexical class exclusion list grouped by POS
             const excludeClasses = document.getElementById('excludeClasses');
             excludeClasses.innerHTML = '';
-            if (data.lexicalClasses.size > 0) {
+            
+            if (data.classGroupings && data.classGroupings.size > 0) {
+                // Group classes by POS
+                data.classGroupings.forEach((classes, posNames) => {
+                    if (classes.size > 0) {
+                        // Create a section header for this POS group
+                        const header = document.createElement('div');
+                        header.style.cssText = 'margin-top: 15px; margin-bottom: 8px; font-weight: 600; color: white; font-size: 0.9rem; opacity: 0.9;';
+                        header.textContent = posNames;
+                        excludeClasses.appendChild(header);
+
+                        // Add checkboxes for each class in this group
+                        classes.forEach(className => {
+                            const label = document.createElement('label');
+                            label.className = 'checkbox-item';
+                            label.style.marginLeft = '15px';
+                            label.innerHTML = `
+                                <input type="checkbox" class="exclude-class" value="${className}">
+                                <span>${className}</span>
+                            `;
+                            excludeClasses.appendChild(label);
+                        });
+                    }
+                });
+            } else if (data.lexicalClasses.size > 0) {
+                // Fallback: show ungrouped if no grouping data
                 data.lexicalClasses.forEach(cls => {
                     const label = document.createElement('label');
                     label.className = 'checkbox-item';
@@ -1236,13 +1482,35 @@
         }
 
         function generateClassOptions(correctClass, pos, numChoices) {
+            const posSensitive = document.getElementById('posSensitiveChoices').checked;
             const allClasses = Array.from(languageData.lexicalClasses);
             const options = [correctClass];
             
-            const otherClasses = allClasses.filter(c => c !== correctClass);
-            while (options.length < numChoices && otherClasses.length > 0) {
-                const randomIndex = Math.floor(Math.random() * otherClasses.length);
-                options.push(otherClasses.splice(randomIndex, 1)[0]);
+            let availableClasses;
+            if (posSensitive) {
+                // Find classes that apply to this POS
+                availableClasses = [];
+                languageData.classGroupings.forEach((classes, posNames) => {
+                    if (posNames.includes(pos)) {
+                        classes.forEach(cls => {
+                            if (cls !== correctClass) {
+                                availableClasses.push(cls);
+                            }
+                        });
+                    }
+                });
+                
+                // If no POS-specific classes found, fall back to all classes
+                if (availableClasses.length === 0) {
+                    availableClasses = allClasses.filter(c => c !== correctClass);
+                }
+            } else {
+                availableClasses = allClasses.filter(c => c !== correctClass);
+            }
+            
+            while (options.length < numChoices && availableClasses.length > 0) {
+                const randomIndex = Math.floor(Math.random() * availableClasses.length);
+                options.push(availableClasses.splice(randomIndex, 1)[0]);
             }
 
             return shuffleArray(options);
@@ -1266,7 +1534,27 @@
             document.getElementById('quizProgress').textContent = 
                 `Question ${currentQuestion + 1} of ${quizData.length}`;
 
-            let questionHTML = `<div class="question-text">${q.prompt}</div>`;
+            // Get question type display name
+            const questionTypeNames = {
+                'local-to-conlang': 'Local Language → Conlang',
+                'conlang-to-local': 'Conlang → Local Language',
+                'from-definition': 'From Definition',
+                'guess-pos': 'Guess Part of Speech',
+                'guess-class': 'Guess Lexical Class',
+                'from-pronunciation': 'From Pronunciation',
+                'guess-pronunciation': 'Guess Pronunciation',
+                'tf-translation': 'True/False Translation',
+                'phrasebook-translation': 'Phrasebook Translation',
+                'phrasebook-tf': 'Phrasebook True/False',
+                'guess-conjugation': 'Guess Conjugation',
+                'guess-conjugation-dimensions': 'Guess Conjugation Dimensions'
+            };
+
+            let questionHTML = `
+                <div class="question-main">
+                    <div class="question-type-label">${questionTypeNames[q.type] || q.type}</div>
+                    <div class="question-text">${q.prompt}</div>
+            `;
 
             if (q.answerFormat === 'text-input') {
                 questionHTML += `<input type="text" class="answer-input" id="userAnswer" placeholder="Type your answer..." autocomplete="off">`;
@@ -1277,6 +1565,11 @@
                 });
                 questionHTML += `</div>`;
             }
+
+            questionHTML += `</div>`;
+
+            // Add word info panel (initially hidden)
+            questionHTML += `<div class="word-info-panel" id="wordInfoPanel"></div>`;
 
             document.getElementById('questionCard').innerHTML = questionHTML;
 
@@ -1317,6 +1610,7 @@
             const caseSensitive = document.getElementById('caseSensitive').checked;
             const accentSensitive = document.getElementById('accentSensitive').checked;
             const revealAnswer = document.getElementById('revealAnswer').checked;
+            const showWordInfo = document.getElementById('showWordInfo').checked;
             
             let userAnswer;
 
@@ -1327,21 +1621,32 @@
                 userAnswer = selected ? selected.dataset.option : '';
             }
 
-            // Normalize for comparison
-            let normalizedUser = userAnswer;
-            let normalizedCorrect = q.correctAnswer;
+            let correct = false;
 
-            if (!caseSensitive) {
-                normalizedUser = normalizedUser.toLowerCase();
-                normalizedCorrect = normalizedCorrect.toLowerCase();
+            // Special handling for different question types
+            if (q.type === 'guess-pos') {
+                // Accept either full name or abbreviation for POS
+                correct = checkPOSAnswer(userAnswer, q.correctAnswer, caseSensitive, accentSensitive);
+            } else if (q.type === 'guess-class') {
+                // Accept any of the word's lexical classes or all of them
+                correct = checkLexicalClassAnswer(userAnswer, q.word, caseSensitive, accentSensitive);
+            } else {
+                // Normal answer checking
+                let normalizedUser = userAnswer;
+                let normalizedCorrect = q.correctAnswer;
+
+                if (!caseSensitive) {
+                    normalizedUser = normalizedUser.toLowerCase();
+                    normalizedCorrect = normalizedCorrect.toLowerCase();
+                }
+
+                if (!accentSensitive) {
+                    normalizedUser = removeAccents(normalizedUser);
+                    normalizedCorrect = removeAccents(normalizedCorrect);
+                }
+
+                correct = normalizedUser === normalizedCorrect;
             }
-
-            if (!accentSensitive) {
-                normalizedUser = removeAccents(normalizedUser);
-                normalizedCorrect = removeAccents(normalizedCorrect);
-            }
-
-            const correct = normalizedUser === normalizedCorrect;
 
             if (correct) score++;
 
@@ -1351,8 +1656,8 @@
                 correct: correct
             });
 
-            // Show feedback
-            const card = document.getElementById('questionCard');
+            // Show feedback in the main area
+            const questionMain = document.querySelector('.question-main');
             const feedback = document.createElement('div');
             feedback.style.cssText = `
                 margin-top: 20px; 
@@ -1368,11 +1673,138 @@
             }
             
             feedback.innerHTML = feedbackHTML;
-            card.appendChild(feedback);
+            questionMain.appendChild(feedback);
+
+            // Show word info panel if enabled and this question is about a specific word
+            if (showWordInfo && q.word && !q.isPhrase) {
+                showWordInfoPanel(q.word);
+            }
 
             document.getElementById('checkAnswer').style.display = 'none';
             document.getElementById('nextQuestion').style.display = 'inline-block';
         });
+
+        function checkPOSAnswer(userAnswer, correctPOS, caseSensitive, accentSensitive) {
+            // Normalize the user's answer
+            let normalized = userAnswer;
+            if (!caseSensitive) normalized = normalized.toLowerCase();
+            if (!accentSensitive) normalized = removeAccents(normalized);
+
+            // Normalize the correct POS name
+            let normalizedCorrect = correctPOS;
+            if (!caseSensitive) normalizedCorrect = normalizedCorrect.toLowerCase();
+            if (!accentSensitive) normalizedCorrect = removeAccents(normalizedCorrect);
+
+            // Check if matches full name
+            if (normalized === normalizedCorrect) return true;
+
+            // Check if matches abbreviation
+            const gloss = languageData.posGlossMap.get(correctPOS);
+            if (gloss) {
+                let normalizedGloss = gloss;
+                if (!caseSensitive) normalizedGloss = normalizedGloss.toLowerCase();
+                if (!accentSensitive) normalizedGloss = removeAccents(normalizedGloss);
+                
+                if (normalized === normalizedGloss) return true;
+            }
+
+            return false;
+        }
+
+        function checkLexicalClassAnswer(userAnswer, word, caseSensitive, accentSensitive) {
+            if (!word.lexicalClassArray || word.lexicalClassArray.length === 0) return false;
+
+            // Normalize the user's answer
+            let normalized = userAnswer;
+            if (!caseSensitive) normalized = normalized.toLowerCase();
+            if (!accentSensitive) normalized = removeAccents(normalized);
+
+            // Try parsing as multiple classes (space, comma-space, or semicolon-space separated)
+            const separators = [', ', '; ', ' '];
+            let userClasses = [normalized]; // Default: treat as single class
+            
+            for (const sep of separators) {
+                if (normalized.includes(sep)) {
+                    userClasses = normalized.split(sep).map(c => c.trim()).filter(Boolean);
+                    break;
+                }
+            }
+
+            // Normalize the word's lexical classes
+            const normalizedWordClasses = word.lexicalClassArray.map(cls => {
+                let norm = cls;
+                if (!caseSensitive) norm = norm.toLowerCase();
+                if (!accentSensitive) norm = removeAccents(norm);
+                return norm;
+            });
+
+            // Check if user provided one valid class
+            if (userClasses.length === 1) {
+                return normalizedWordClasses.includes(userClasses[0]);
+            }
+
+            // Check if user provided all classes (in any order)
+            if (userClasses.length === normalizedWordClasses.length) {
+                const sortedUser = [...userClasses].sort();
+                const sortedWord = [...normalizedWordClasses].sort();
+                return sortedUser.every((cls, idx) => cls === sortedWord[idx]);
+            }
+
+            return false;
+        }
+
+        function showWordInfoPanel(word) {
+            const panel = document.getElementById('wordInfoPanel');
+            if (!panel) return;
+
+            let html = `<h3>Word Info</h3>`;
+
+            html += `<div class="word-info-item">
+                <div class="word-info-label">Conlang Word</div>
+                <div class="word-info-value">${word.conlang}</div>
+            </div>`;
+
+            html += `<div class="word-info-item">
+                <div class="word-info-label">Translation</div>
+                <div class="word-info-value">${word.translation}</div>
+            </div>`;
+
+            if (word.pronunciation) {
+                html += `<div class="word-info-item">
+                    <div class="word-info-label">Pronunciation</div>
+                    <div class="word-info-value word-info-pronunciation">/${word.pronunciation}/</div>
+                </div>`;
+            }
+
+            html += `<div class="word-info-item">
+                <div class="word-info-label">Part of Speech</div>
+                <div class="word-info-value">${word.partOfSpeech}</div>
+            </div>`;
+
+            if (word.lexicalClass) {
+                html += `<div class="word-info-item">
+                    <div class="word-info-label">Lexical Class</div>
+                    <div class="word-info-value">${word.lexicalClass}</div>
+                </div>`;
+            }
+
+            if (word.definition) {
+                html += `<div class="word-info-item">
+                    <div class="word-info-label">Definition</div>
+                    <div class="word-info-value">${word.definition}</div>
+                </div>`;
+            }
+
+            if (word.etymology) {
+                html += `<div class="word-info-item">
+                    <div class="word-info-label">Etymology</div>
+                    <div class="word-info-value">${word.etymology}</div>
+                </div>`;
+            }
+
+            panel.innerHTML = html;
+            panel.classList.add('visible');
+        }
 
         // Next question
         document.getElementById('nextQuestion').addEventListener('click', () => {
@@ -1381,6 +1813,16 @@
                 showQuestion();
             } else {
                 showResults();
+            }
+        });
+
+        // Quit quiz button - use event delegation
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'quitQuiz') {
+                if (confirm('Are you sure you want to quit? Your progress will be lost.')) {
+                    quizView.classList.remove('active');
+                    setupView.style.display = 'block';
+                }
             }
         });
 
