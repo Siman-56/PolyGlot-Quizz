@@ -506,20 +506,6 @@
             flex-wrap: wrap;
         }
 
-        .quit-button {
-            background: transparent;
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            color: white;
-            padding: 12px 30px;
-            font-size: 0.9rem;
-        }
-
-        .quit-button:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: white;
-            box-shadow: none;
-        }
-
         .results {
             text-align: center;
             padding: 60px 40px;
@@ -814,7 +800,6 @@
             <div class="quiz-actions">
                 <button id="checkAnswer">Check Answer</button>
                 <button id="nextQuestion" style="display: none;">Next Question</button>
-                <button id="quitQuiz" class="quit-button">Quit Quiz</button>
             </div>
         </div>
 
@@ -954,6 +939,7 @@
                 partsOfSpeech: new Set(),
                 lexicalClasses: new Set(),
                 classGroupings: new Map(), // Maps "POS names" -> Set of class names
+                classPairToCategoryMap: new Map(), // Maps "classID,valueID" -> category name
                 posGlossMap: new Map(), // Maps POS name -> abbreviation
                 languageName: '',
                 phrasebook: [],
@@ -991,7 +977,8 @@
 
             // Parse lexical classes (wordGrammarClassCollection)
             const classElements = xmlDoc.querySelectorAll('wordGrammarClassCollection > wordGrammarClassNode');
-            const classMap = new Map();
+            const classMap = new Map(); // Maps "classID,valueID" -> value name
+            const classPairToCategoryMap = new Map(); // Maps "classID,valueID" -> category name
             
             classElements.forEach(classEl => {
                 const id = classEl.querySelector('wordGrammarClassID')?.textContent;
@@ -999,9 +986,6 @@
                 const applyTypes = classEl.querySelector('wordGrammarApplyTypes')?.textContent || '';
                 
                 if (id && name) {
-                    classMap.set(id, name);
-                    data.lexicalClasses.add(name);
-                    
                     // Parse which POS this class applies to
                     const posIds = applyTypes.split(',').map(s => s.trim()).filter(Boolean);
                     const applicablePosNames = posIds
@@ -1009,30 +993,30 @@
                         .filter(Boolean)
                         .join(', ');
                     
-                    if (applicablePosNames) {
-                        if (!data.classGroupings.has(applicablePosNames)) {
-                            data.classGroupings.set(applicablePosNames, new Set());
-                        }
-                        data.classGroupings.get(applicablePosNames).add(name);
-                    }
-                    
-                    // Also map class values
+                    // Only map and add class VALUES
                     const valueElements = classEl.querySelectorAll('wordGrammarClassValueNode');
                     valueElements.forEach(valueEl => {
                         const valueId = valueEl.querySelector('wordGrammarClassValueId')?.textContent;
                         const valueName = valueEl.querySelector('wordGrammarClassValueName')?.textContent;
                         if (valueId && valueName) {
-                            classMap.set(`${id},${valueId}`, valueName);
+                            const pairKey = `${id},${valueId}`;
+                            classMap.set(pairKey, valueName);
+                            classPairToCategoryMap.set(pairKey, name); // Map the full pair to category
                             data.lexicalClasses.add(valueName);
                             
-                            // Add value to the same POS grouping
+                            // Add value to the POS grouping
                             if (applicablePosNames) {
+                                if (!data.classGroupings.has(applicablePosNames)) {
+                                    data.classGroupings.set(applicablePosNames, new Set());
+                                }
                                 data.classGroupings.get(applicablePosNames).add(valueName);
                             }
                         }
                     });
                 }
             });
+            
+            data.classPairToCategoryMap = classPairToCategoryMap;
 
             // Parse lexicon entries
             const lexiconEntries = xmlDoc.querySelectorAll('lexicon > word');
@@ -1047,12 +1031,28 @@
                 // Get part of speech name from ID
                 const pos = posMap.get(posId) || 'Unknown';
 
-                // Get lexical classes
+                // Get lexical classes with their category info
                 const classElements = wordEl.querySelectorAll('wordClassCollection > wordClassification');
-                const lexicalClasses = Array.from(classElements).map(el => {
-                    const classValue = el.textContent;
-                    return classMap.get(classValue) || classValue;
-                }).filter(Boolean);
+                const lexicalClasses = [];
+                const lexicalClassesWithCategory = [];
+                
+                Array.from(classElements).forEach(el => {
+                    const classPair = el.textContent.trim(); // e.g., "2,6"
+                    const valueName = classMap.get(classPair);
+                    const categoryName = classPairToCategoryMap.get(classPair);
+                    
+                    if (valueName) {
+                        lexicalClasses.push(valueName);
+                        
+                        // Store value with its category using the pair mapping
+                        if (categoryName) {
+                            lexicalClassesWithCategory.push({
+                                value: valueName,
+                                category: categoryName
+                            });
+                        }
+                    }
+                });
 
                 if (conlangWord && localWord) {
                     data.words.push({
@@ -1063,6 +1063,7 @@
                         pronunciation: pronunciation,
                         lexicalClass: lexicalClasses.join(', '),
                         lexicalClassArray: lexicalClasses, // Store as array too for matching
+                        lexicalClassesWithCategory: lexicalClassesWithCategory, // Store with category info
                         etymology: stripHTML(etymology)
                     });
                 }
@@ -1781,11 +1782,14 @@
                 <div class="word-info-value">${word.partOfSpeech}</div>
             </div>`;
 
-            if (word.lexicalClass) {
-                html += `<div class="word-info-item">
-                    <div class="word-info-label">Lexical Class</div>
-                    <div class="word-info-value">${word.lexicalClass}</div>
-                </div>`;
+            // Show lexical classes separately with their proper category names
+            if (word.lexicalClassesWithCategory && word.lexicalClassesWithCategory.length > 0) {
+                word.lexicalClassesWithCategory.forEach(classInfo => {
+                    html += `<div class="word-info-item">
+                        <div class="word-info-label">${classInfo.category}</div>
+                        <div class="word-info-value">${classInfo.value}</div>
+                    </div>`;
+                });
             }
 
             if (word.definition) {
@@ -1813,16 +1817,6 @@
                 showQuestion();
             } else {
                 showResults();
-            }
-        });
-
-        // Quit quiz button - use event delegation
-        document.addEventListener('click', (e) => {
-            if (e.target && e.target.id === 'quitQuiz') {
-                if (confirm('Are you sure you want to quit? Your progress will be lost.')) {
-                    quizView.classList.remove('active');
-                    setupView.style.display = 'block';
-                }
             }
         });
 
