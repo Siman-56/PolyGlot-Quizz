@@ -6,17 +6,17 @@ labels: bug
 assignees: ''
 ---
 
-**Describe the bug**
+**Describe the bug**  
 A clear description of what the bug is.
 
-**To Reproduce**
+**To Reproduce**  
 Explain how to reproduce the bug.
 
-**Expected behavior**
+**Expected behavior**  
 What you expected to happen.
 
-**Screenshots/Error messages**
+**Screenshots/Error messages**  
 If applicable, add screenshots or paste error messages here.
 
-**Additional context**
+**Additional context**  
 Any other relevant information.
