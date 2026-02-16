@@ -117,6 +117,32 @@
             font-weight: 600;
             margin-bottom: 25px;
             color: var(--ink);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .help-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .help-icon:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+            transform: scale(1.1);
         }
 
         .upload-zone {
@@ -511,6 +537,24 @@
             padding: 60px 40px;
         }
 
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+        }
+
+        .footer a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+
+        .footer a:hover {
+            color: white;
+        }
+
         .results h2 {
             font-family: 'Cormorant Garamond', serif;
             font-size: 3rem;
@@ -643,7 +687,10 @@
 
         <div id="setupView">
             <div class="section">
-                <h2>Upload Language File</h2>
+                <h2>
+                    Upload Language File
+                    <a href="https://github.com/Siman-56/PolyGlot-Quizz/blob/main/Help.md" target="_blank" rel="noopener" class="help-icon" title="Help">?</a>
+                </h2>
                 <div class="upload-zone" id="uploadZone">
                     <div class="upload-icon">📁</div>
                     <div class="upload-text">
@@ -787,6 +834,11 @@
             </div>
         </div>
 
+        <div class="footer">
+            I am not affiliated with PolyGlot or its creator. If you haven't already, go see <a href="https://draquet.github.io/PolyGlot/" target="_blank" rel="noopener">PolyGlot's official website here</a>.<br>
+            <a href="https://github.com/Siman-56/PolyGlot-Quizz/blob/main/Help.md" target="_blank" rel="noopener">Help</a>
+        </div>
+
         <div id="quizView" class="quiz-container">
             <div class="quiz-header">
                 <div class="quiz-title" id="quizTitle">Quiz</div>
@@ -801,6 +853,11 @@
                 <button id="checkAnswer">Check Answer</button>
                 <button id="nextQuestion" style="display: none;">Next Question</button>
             </div>
+
+            <div class="footer">
+                I am not affiliated with PolyGlot or its creator. If you haven't already, go see <a href="https://draquet.github.io/PolyGlot/" target="_blank" rel="noopener">PolyGlot's official website here</a>.<br>
+                <a href="https://github.com/Siman-56/PolyGlot-Quizz/blob/main/Help.md" target="_blank" rel="noopener">Help</a>
+            </div>
         </div>
 
         <div id="resultsView" class="quiz-container">
@@ -810,6 +867,11 @@
                 <div class="score-label" id="scoreDetails">0 / 0 correct</div>
                 <div id="reviewSection"></div>
                 <button id="newQuiz">Create New Quiz</button>
+            </div>
+
+            <div class="footer">
+                I am not affiliated with PolyGlot or its creator. If you haven't already, go see <a href="https://draquet.github.io/PolyGlot/" target="_blank" rel="noopener">PolyGlot's official website here</a>.<br>
+                <a href="https://github.com/Siman-56/PolyGlot-Quizz/blob/main/Help.md" target="_blank" rel="noopener">Help</a>
             </div>
         </div>
     </div>
