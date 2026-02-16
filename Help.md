@@ -1,6 +1,6 @@
 # Help document for people who are stuck!
 
-You were probably sent here after having pressed the "help" button while trying out PolyGlot Quiz Generator. If you can't find an answer to your problem, want to report a bug, suggest a feature or contact me for whatever reason, you can head to [link to suggestion thing] or message me at siman_56_34750 on discord.
+You were probably sent here after having pressed the "help" button while trying out PolyGlot Quiz Generator. If you can't find an answer to your problem here, want to report a bug, suggest a feature or contact me for whatever reason, you can create an [issue](https://github.com/Siman-56/PolyGlot-Quizz/issues) or message me at siman_56_34750 on discord.
 
 ### I can't upload my file
 Make sure you are trying to upload your language file ending in '.pgd'. This is the file read by PolyGlot when you open your language within the app. If you do not know where it is, it's most likely in a file named PolyGlot in your home directory (usualy `/Users/[username]/PolyGlot/` on mac or `C:\Users\[username]\PolyGlot` on windows), along with your error log and font files. Make sure not to move it or you may have trouble opening your language in PolyGlot, you can safely upload it to PolyGlot Quiz Generator from there or copy it to another directory.
