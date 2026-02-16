@@ -10,10 +10,7 @@ assignees: ''
 A clear description of what the bug is.
 
 **To Reproduce**
-Steps to reproduce the behavior:
-1. 
-2. 
-3. 
+Explain how to reproduce the bug.
 
 **Expected behavior**
 What you expected to happen.
