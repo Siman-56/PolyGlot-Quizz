@@ -6,14 +6,14 @@ labels: enhancement
 assignees: ''
 ---
 
-**What would you like to see added or changed?**
+**What would you like to see added or changed?**  
 A clear description of the feature or improvement.
 
-**Why would this be useful?**
+**Why would this be useful?**  
 What problem does this solve or what does it enable?
 
-**How do you imagine it working?**
+**How do you imagine it working?**  
 If you have ideas about how it could be implemented or how users would interact with it.
 
-**Additional context**
+**Additional context**  
 Any examples, references, mockups, or other relevant information.
