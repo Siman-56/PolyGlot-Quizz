@@ -1,3 +1,0 @@
-# Polyglot Quizz Generator
-
-:)
